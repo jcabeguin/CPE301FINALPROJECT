@@ -3,7 +3,7 @@ Jerard Cabeguin
 CPE 301 Final Project
 May 10, 2024
 */
-#include <LiquidCrystal.h>
+#include <LiquidCrystal.h> //LCD 
 #include <DHT11.h>
 DHT11 dht11(26);
 #include<Wire.h>
@@ -16,8 +16,8 @@ RTC_DS1307 rtc;
 #define WSignal A5 //Signal Pin for Water Sensor
 #define RDA 0x80
 #define TBE 0x20
-#define tempThr 20
-#define LowWater 110
+#define tempThr 20 //Temperature Threshold
+#define LowWater 110 //Low Water Level Threshold
 
 // Timer Pointers
 volatile unsigned char *myTCCR1A  = (unsigned char *) 0x80;
@@ -93,16 +93,19 @@ volatile unsigned char *pinA3  = (unsigned char*) 0x20;
 volatile unsigned char *ddrA3  = (unsigned char*) 0x21;
 volatile unsigned char *portA3 = (unsigned char*) 0x22;
 
-//LCD Screen
+//LCD Screen Initialization
 const int RS = 11, EN = 12, D4 = 2, D5 = 3, D6 = 4, D7 = 5;
-LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
+LiquidCrystal lcd(RS, EN, D4, D5, D6, D7); 
 
+//Stepper Motor Steps Per Revolution and Initialization
 const int steps = 2038;
 Stepper myStepper(steps, 30, 31, 32, 33);
+
 //One minute myDelay for the LCD
 unsigned long previousMillis = 0;
 const long interval = 60000;
 
+//DHT11 Temperature and Humidity Value Initializaiton
 int temp = 0;
 int humi = 0;
 int ht = 0;
@@ -114,7 +117,7 @@ void setup(){
   U0init(9600); //Initialize the Serial port
   adc_init(); //Sets up the ADC
 
-  myStepper.setSpeed(10);
+  myStepper.setSpeed(10); //Speed of how fast the motor takes its steps
   attachInterrupt(digitalPinToInterrupt(20), start, RISING); //sets up the attachInterrupt
 
   //Initialize the LCD 
@@ -156,14 +159,14 @@ void loop(){
     TH();
     wSensor();
     temp = tSensor();
-    
+    //Stepper Motor control (Works in every state except Error)
     if(mode != 3){
       if((*pinB3 & (0x01 << 3)) && ventButton == 0){
-        myStepper.step(steps/2);
+        myStepper.step(steps/4);
         ventButton = 1;
       }
       else if((*pinB3 & (0x01 << 3)) && ventButton == 1){
-      myStepper.step(-2038);
+      myStepper.step(-steps/4);
       ventButton = 0;
       }
     }
@@ -183,26 +186,26 @@ void loop(){
     *portL7 &= ~(0x01 << 7);
 
     if((*pinB3 & (0x01 << 3)) && ventButton == 0){
-        myStepper.step(steps/2);
+        myStepper.step(steps/4);
         ventButton = 1;
       }
       else if((*pinB3 & (0x01 << 3)) && ventButton == 1){
-      myStepper.step(-2038);
+      myStepper.step(-steps/4);
       ventButton = 0;
       }
     
+    //When start button is pressed, system starts and goes to idle. 
     if((*pinB2 & (0x01 <<2))){
-      Serial.println("Button Pressed");
-      mode = 2;
+      mode = 1;
       myDelay(1000);
     }
   }
-  else if(mode == 1){
-    if(temp < tempThr){
-      mode = 2;
+  else if(mode == 1){ //Condition to check temperature
+    if(temp < tempThr){ // System will be idle if the temperature is below the Temperature threshold
+      mode = 2; 
     }
-    else{
-      mode = 3;
+    else{ //If the system is higher than the temperature threshold, then the system will run. 
+      mode = 4;
     }
   }
   else if(mode == 2){ //IDLE STATE (GREEN LED ON)
@@ -218,11 +221,11 @@ void loop(){
     *portG0 &= ~(0x01 << 0);
     *portL7 &= ~(0x01 << 7);
 
-    if(temp > tempThr){
+    if(temp > tempThr){ //If the temperature is greater than the threshold, then the system will run. 
       mode = 4;
     }
 
-    if((*pinB1 & (0x01 << 1))){
+    if((*pinB1 & (0x01 << 1))){ //If the stop button is pressed, then the system will be disabled. 
       mode = 0;
     }
   }
@@ -241,12 +244,12 @@ void loop(){
     *portG0 &= ~(0x01 << 0);
     *portL7 &= ~(0x01 << 7);
 
-    if((*pinB2 & (0x01 <<2))){
+    if((*pinB2 & (0x01 <<2))){ //If the start/restart button is pressed, the button will go back into its idle state. 
       lcd.clear();
       mode = 2;
       myDelay(1000);
     }
-    if((*pinB1 & (0x01 << 1))){
+    if((*pinB1 & (0x01 << 1))){ //If the stop button is pressed, then the system will be disabled. 
       mode = 0;
     }
 
@@ -263,10 +266,9 @@ void loop(){
     *portG1 |= (0x01 << 1);
     *portG0 |= (0x01 << 0);
     *portL7 &= ~(0x01 << 7);
-    if((*pinB1 & (0x01 << 1))){
+    if((*pinB1 & (0x01 << 1))){ //If the stop button is pressed, then the system will be in its disabled state. 
       mode = 0;
     }
-
     
   }
   myDelay(1000);
@@ -331,30 +333,31 @@ unsigned int adc_read(unsigned char adc_channel_num){
   return *my_ADC_DATA;
 }
 
-void setupTimer1(){
-  noInterrupts();
 
-  TCCR1A = 0;
-  TCCR1B = 0;
-
-  TCCR1B |= (1 << WGM12);
-
-  TCCR1B |= (1 << CS12) | (1 << CS10);
-
-  TIMSK1 |= (OCIE1A);
-
-  interrupts();
+void myDelay(unsigned int freq){
+  //calc period
+  double period = 1.0/double(freq);
+  // 50% duty cycle
+  double half_period = period/2.0f;
+  // clock period def
+  double clk_period = 0.0000000625;
+  //calc tick
+  unsigned int ticks = half_period/clk_period;
+  // stop the timer
+  *myTCCR1B &= 0xF8;
+  // set the counts
+  *myTCNT1 = (unsigned int)(65536 - ticks);
+  // start the timer
+  *myTCCR1A = 0x0;
+  *myTCCR1B |= 0b00000001;
+  //wait for overflow
+  while((*myTIFR1 & 0x01)==0); // 0b 0000 0000
+  //stop the timer
+  *myTCCR1B &= 0xF8;
+  //rest TOV
+  *myTIFR1 |= 0x01;
 }
-
-void myDelay(unsigned int millisec){
-  unsigned long timerCount = 16000000L / 1024; //Calculate the timer compare value. Calculate ticks per second 
-  OCR1A = (timerCount * millisec / 1000) -1; //Calculate the compare match value.
-
-  TCNT1 = 0; //Reset Timer Counter
-  while((TIFR1 & (1 << OCF1A)));
-  TIFR1 |= (1 << OCF1A);
-}
-void TH(){
+void TH(){ //Reads the temperature and humidity and displays the values onto the LCD screen. 
   unsigned long currentMillis = millis();
 
   if(currentMillis - previousMillis >=interval){
@@ -375,7 +378,7 @@ void TH(){
   }
 }
 
-void wSensor(){
+void wSensor(){// Sensor for the water level and determines whether the system should go into the error state. 
   *portA5 |= (0x01 << 5);
   unsigned int wLevel = adc_read(5);
   Serial.print("Water Level: ");
@@ -386,7 +389,7 @@ void wSensor(){
   return mode;
 }
 
-unsigned int tSensor(){
+unsigned int tSensor(){ //Reads the temperature from the DHT11
   unsigned int temperature = dht11.readTemperature();
   return temperature;
 }
@@ -400,14 +403,11 @@ void start(){
     mode = 1;
   }
 }
-
 void reset(){
   if(!(*pinB2 & (0x01 << 2))){
     setup();
   }
 }
-
-
 void error(){
   *portB2 |= (0x01 << 2);
   if(mode == 3){
