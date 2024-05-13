@@ -27,14 +27,15 @@ The central control unit for managing sensor data inputs and outputs to fulfill 
 - **Blue LED:** Indicates the system is running/cooling.
 
 ## Circuit Diagram and Schematic
+![FinalProjectSchematic](https://github.com/jcabeguin/CPE301FINALPROJECT/assets/112597766/14c9dccb-68c4-470d-8477-6bc0421e083e)
 
 ## Functional State Description
 - **Disabled:** The system is off; only the start button is monitored to start the system into the idle state. Yellow LED is on. Vents are adjustable.
 -  **Idle:** Monitors the temperature and water levels, ready to activate cooling as needed. Green LED is on. Vents are adjustable. 
--  **Running:** Active cooling in progress; the fan is turned on, and the vent is capable of being adjusted. Blue LED is on. Vents are adjustable. Fan is on.
--  **Error:** Indicator that the water level is low. Requires user intervention to resume normal operation and pressing the reset button to the idle state or the stop button to the disabled state. 
+-  **Running:** Active cooling in progress; the fan is turned on, and the vent is adjustable. Blue LED is on. Vents are adjustable. Fan is on.
+-  **Error:** Indicator that the water level is low. Requires user intervention to resume normal operation and press the reset button to the idle state or the stop button to the disabled state. 
 
-## PROJECT IMPLEMETATION
+## PROJECT IMPLEMENTATION
 - ### Libraries:
   Some of the libraries that were included would be:
   - **LiquidCrystal.h:** Library for the LCD monitor
