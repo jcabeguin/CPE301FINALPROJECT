@@ -1,7 +1,7 @@
 /* 
 Jerard Cabeguin 
 CPE 301 Final Project
-May 10, 2024
+May 12, 2024
 */
 #include <LiquidCrystal.h> //LCD 
 #include <DHT11.h>
