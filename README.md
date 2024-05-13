@@ -29,7 +29,7 @@ The central control unit for managing sensor data inputs and outputs to fulfill 
 ## CIRCUIT DIAGRAM, SCHEMATIC AND VIDEO DEMONSTRATION
 ![FinalProjectSchematic](https://github.com/jcabeguin/CPE301FINALPROJECT/assets/112597766/14c9dccb-68c4-470d-8477-6bc0421e083e)
 ![IMG_8242](https://github.com/jcabeguin/CPE301FINALPROJECT/assets/112597766/ba97b90c-7a1a-48a0-90e9-cf7e3c1b9403)
-Video Demonstration: The link is commented on with the GitHub link submission. 
+### Video Demonstration: The link is commented on with the GitHub link submission. 
 
 ## Functional State Description
 - **Disabled:** The system is off; only the start button is monitored to start the system into the idle state. Yellow LED is on. Vents are adjustable.
