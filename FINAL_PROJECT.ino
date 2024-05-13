@@ -1,7 +1,7 @@
 /* 
 Jerard Cabeguin 
 CPE 301 Final Project
-May 12, 2024
+May 10, 2024
 */
 #include <LiquidCrystal.h> //LCD 
 #include <DHT11.h>
@@ -113,6 +113,12 @@ int ht = 0;
 int Wvalue = 0; //Variable to store the value of the water sensor
 int mode = 0; //Variable to know which mode the program is at. 0 = DISABLED (YELLOW); 1 = IDLE (GREEN); 2 = ERROR (RED); 3 RUNNING (BLUE)
 int ventButton = 0;
+
+//Variables for clock module
+unsigned int hour;
+unsigned int minute;
+unsigned int second;
+
 void setup(){
   U0init(9600); //Initialize the Serial port
   adc_init(); //Sets up the ADC
@@ -124,6 +130,11 @@ void setup(){
   lcd.clear();
   lcd.begin(16, 2);// Sets up the number of columns and rows.
   lcd.setCursor(0,0);
+
+  //RTC CLOCK SETUP
+  rtc.begin();
+  rtc.isrunning();
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   //Vent Buttons Setup
   *ddrB2 &= ~(0x01 << 2); //Pin 51 Button
@@ -152,9 +163,12 @@ void setup(){
   *ddrD0 &= ~(0x01<<0);
 
   mode = 0; //Disabled State (Yellow LED)
+
+
 }
 
 void loop(){
+  Serial.println(mode);
   if(mode !=0){
     TH();
     wSensor();
@@ -170,6 +184,7 @@ void loop(){
       ventButton = 0;
       }
     }
+    myDelay(10000);
   }
   if(mode == 0){ // DISABLED STATE (YELLOW LED ON)
    lcd.clear();
@@ -185,6 +200,7 @@ void loop(){
     *portG0 &= ~(0x01 << 0);
     *portL7 &= ~(0x01 << 7);
 
+
     if((*pinB3 & (0x01 << 3)) && ventButton == 0){
         myStepper.step(steps/4);
         ventButton = 1;
@@ -196,8 +212,8 @@ void loop(){
     
     //When start button is pressed, system starts and goes to idle. 
     if((*pinB2 & (0x01 <<2))){
-      mode = 1;
-      myDelay(1000);
+      mode = 2;
+      myDelay(10000);
     }
   }
   else if(mode == 1){ //Condition to check temperature
@@ -221,12 +237,15 @@ void loop(){
     *portG0 &= ~(0x01 << 0);
     *portL7 &= ~(0x01 << 7);
 
+
     if(temp > tempThr){ //If the temperature is greater than the threshold, then the system will run. 
       mode = 4;
+      myDelay(10000);
     }
 
     if((*pinB1 & (0x01 << 1))){ //If the stop button is pressed, then the system will be disabled. 
       mode = 0;
+      myDelay(10000);
     }
   }
   else if(mode == 3){ //ERROR STATE (RED LED ON)
@@ -244,15 +263,18 @@ void loop(){
     *portG0 &= ~(0x01 << 0);
     *portL7 &= ~(0x01 << 7);
 
+
+
     if((*pinB2 & (0x01 <<2))){ //If the start/restart button is pressed, the button will go back into its idle state. 
       lcd.clear();
       mode = 2;
-      myDelay(1000);
+      myDelay(10000);
     }
     if((*pinB1 & (0x01 << 1))){ //If the stop button is pressed, then the system will be disabled. 
       mode = 0;
+      myDelay(10000);
     }
-
+  myDelay(10000);
   }
   else if(mode == 4){ //RUNNING STATE (BLUE LED ON)
     //Turn BLUE LED ON
@@ -262,16 +284,18 @@ void loop(){
     *portA1 &= ~(0x01 << 1);
     *portA2 &= ~(0x01 << 2);
 
-    //Turn Fan OFF
+    //Turn Fan ON
     *portG1 |= (0x01 << 1);
     *portG0 |= (0x01 << 0);
     *portL7 &= ~(0x01 << 7);
+
     if((*pinB1 & (0x01 << 1))){ //If the stop button is pressed, then the system will be in its disabled state. 
       mode = 0;
+      myDelay(10000);
     }
-    
+    myDelay(10000);
   }
-  myDelay(1000);
+  myDelay(10000);
   U0putchar('\n');
 }
 
@@ -289,7 +313,9 @@ unsigned char U0kbhit(){
   return *myUCSR0A & RDA;
 }
 unsigned char U0getchar(){
-  return *myUDR0;
+  unsigned char cha;
+  cha = *myUDR0;
+  return cha;
 }
 void U0putchar(unsigned char U0pdata){
   while((*myUCSR0A & TBE)==0);
@@ -398,16 +424,19 @@ void dis(){
   mode = 0;
   lcd.clear();
 }
+
 void start(){
   if(mode ==0){
     mode = 1;
   }
 }
+
 void reset(){
   if(!(*pinB2 & (0x01 << 2))){
     setup();
   }
 }
+
 void error(){
   *portB2 |= (0x01 << 2);
   if(mode == 3){
